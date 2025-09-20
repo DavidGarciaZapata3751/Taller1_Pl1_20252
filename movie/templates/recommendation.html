@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<body>
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <form action="{% url 'recommendation' %}" method="GET">
+    <div class="mb-3">
+      <label for="searchMovie" class="form-label">Search for Movie:</label>
+      <input type="text" class="form-control" id="searchMovie" name="searchMovie"
+             value="{{ searchTerm|default:'' }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+
+  <hr>
+  <p>Searching for: <strong>{{ searchTerm }}</strong></p>
+
+  <div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for movie in movies %}
+      <div class="col">
+        <div class="card mb-3" style="width: 18rem;">
+          <img src="{{ movie.image.url }}" class="card-img-top" alt="{{ movie.title }}">
+          <div class="card-body">
+            <h2 class="card-title">{{ movie.title }}</h2>
+            <h6 class="card-subtitle mb-2 text-muted">{{ movie.description }}</h6>
+            <h5 class="card-subtitle mb-2 text-muted">{{ movie.genre }}</h5>
+            <h5 class="card-subtitle mb-2 text-muted">{{ movie.year }}</h5>
+            {% if movie.similarity %}
+              <span class="badge bg-secondary">score: {{ movie.similarity|floatformat:3 }}</span>
+            {% endif %}
+            {% if movie.url %}
+              <p><a href="{{ movie.url }}" target="_blank" class="btn btn-outline-info">Movie Link</a></p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p>No results.</p>
+    {% endfor %}
+  </div>
+
+  <h2 class="mt-4">Join our mailing list:</h2>
+  <form action="{% url 'signup' %}">
+    <div class="mb-3">
+      <label for="email" class="form-label">Enter your Email:</label>
+      <input type="email" class="form-control" name="email">
+    </div>
+    <button type="submit" class="btn btn-primary">Sign Up</button>
+  </form>
+</div>
+{% endblock content %}
+
+</body>
+</html>

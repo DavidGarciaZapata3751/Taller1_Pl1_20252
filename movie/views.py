@@ -1,3 +1,4 @@
+import os
 from django.shortcuts import render
 from django.http import HttpResponse
 from .models import Movie
@@ -5,13 +6,19 @@ import matplotlib.pyplot as plt
 import matplotlib
 import io 
 import urllib, base64
+import numpy as np
 from django.shortcuts import render
 from django.http import HttpResponse
 from .models import Movie
 matplotlib.use('Agg')              # Backend sin ventana (recomendado en servidores)
 from collections import Counter
-
+from openai import OpenAI
+from dotenv import load_dotenv
 # Create your views here.
+load_dotenv('openAI.env')
+MODEL = "text-embedding-3-small"
+CLIENT = OpenAI(api_key=os.environ.get("openai_apikey"))
+
 
 def home(request):
     searchTerm = request.GET.get('searchMovie')
@@ -25,6 +32,55 @@ def home(request):
         'searchTerm': searchTerm,
         'movies': movies
     })
+
+def recommendation(request):
+    q = request.GET.get("searchMovie")
+    if not q:
+        return render(request, "recommendation.html", {
+            "searchTerm": q,
+            "movies": Movie.objects.all()[:20]
+        })
+
+    # 1) Embedding de la consulta
+    q_vec = embed_text(q)
+
+    # 2) Comparar contra cada película con emb guardado
+    scored = []
+    for m in Movie.objects.exclude(emb=None):
+        v = bytes_to_vec(m.emb)
+        if v is None or v.size == 0:
+            continue
+        s = cosine(q_vec, v)
+        m.similarity = s   # atributo temporal para la plantilla
+        scored.append(m)
+
+    # 3) Ordenar por similitud descendente
+    scored.sort(key=lambda x: x.similarity, reverse=True)
+    movies = scored[:20]
+
+    return render(request, "recommendation.html", {
+        "searchTerm": q,
+        "movies": movies
+    })
+
+
+def bytes_to_vec(b: bytes) -> np.ndarray:
+    if b is None:
+        return None
+    return np.frombuffer(b, dtype=np.float32)
+
+def embed_text(text: str) -> np.ndarray:
+    if not os.environ.get("openai_apikey"):
+        raise RuntimeError("Falta la variable de entorno 'openai_apikey'.")
+    resp = CLIENT.embeddings.create(input=[text], model=MODEL)
+    return np.array(resp.data[0].embedding, dtype=np.float32)
+
+def cosine(a: np.ndarray, b: np.ndarray) -> float:
+    na, nb = np.linalg.norm(a), np.linalg.norm(b)
+    if na == 0 or nb == 0:
+        return 0.0
+    return float(np.dot(a, b) / (na * nb))
+
 
 
 
