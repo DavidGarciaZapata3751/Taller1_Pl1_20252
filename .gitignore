@@ -1,4 +1,10 @@
 *.pyc
+<<<<<<< HEAD
+=======
+.venv/
+env/
+venv/
+>>>>>>> 3d55ae7 (commit inicial con archivos locales)
 openAI.env
 *.env
 .env
